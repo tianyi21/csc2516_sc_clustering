@@ -10,6 +10,7 @@
 """
 
 
+import os
 import numpy as np
 
 
@@ -27,3 +28,11 @@ SAVE_EPOCH = 100
 NUMPY_SEED = 2516
 
 TORCH_SEED = 2516
+
+RESULTS_PATH = "./results"
+
+VIS_PATH = os.path.join(RESULTS_PATH, "visualization")
+
+CLS_PATH = os.path.join(RESULTS_PATH, "clustering")
+
+LOG_PATH = os.path.join(RESULTS_PATH, "logs")

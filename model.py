@@ -90,7 +90,7 @@ class _AESC(nn.Module):
         # Clustering
         # q = self.cls_fc_2(self.cls_fc_1(x_enc))
 
-        return y, x_enc, None #q
+        return y, x_enc
 
     @classmethod
     def adjust_dim(cls, dim):
@@ -148,7 +148,6 @@ class _VAESC(nn.Module):
         y = self.dec_1_fc(self.dec_2_fc(self.dec_3_fc(self.dec_4_fc(z))))
         return y, mu, logvar
 
-
     @classmethod
     def adjust_cls_par(cls, dim, device):
         cls.dim[0] = dim
@@ -167,7 +166,6 @@ def vl_loop(model, loader, sel, return_sel):
 
             if sel.lower() == 'ae':
                 y, x_enc, q = model(data)
-                p = target_distribution(x_enc)
                 embedding.extend(x_enc.detach().cpu().numpy())
                 loss_w = compute_loss('ae', data, y, x_enc, p)
 
@@ -193,7 +191,7 @@ def vl_loop(model, loader, sel, return_sel):
         if sel.lower() == 'vae':
             print("\t\tLoss_w: {}\tLoss_kl: {}".format(epoch_loss_w / (len(loader.dataset)),
                                                    epoch_loss_kl / len(loader.dataset)))
-            return epoch_loss, epoch_loss_w, epoch_loss_kl
+            return epoch_loss / (len(loader.dataset)), epoch_loss_w / (len(loader.dataset)), epoch_loss_kl / (len(loader.dataset))
         else:
             print("\t\tLoss_w: {}".format(epoch_loss_w / (len(loader.dataset))))
             return epoch_loss, epoch_loss_w
@@ -203,11 +201,6 @@ def vl_loop(model, loader, sel, return_sel):
             return np.array(embedding), label.cpu().numpy()
         except ValueError:
             return np.array(embedding), None
-
-
-def target_distribution(q):
-    weight = q ** 2 / (torch.sum(q, dim=0) + 1e-5)
-    return torch.transpose(torch.transpose(weight, 0, 1) / torch.sum(weight, dim=1), 0, 1)
 
 
 def learning_rate_decay(optimizer, decay):

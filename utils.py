@@ -20,13 +20,13 @@ import numpy as np
 from cfgs import NUMPY_SEED, TORCH_SEED
 
 
-def load_data(mm, np, cache, path, w_cache, skip_row, skip_col, seps, transpose, label, path_label, col_name):
+def load_data(mm, np, cache, file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, col_name):
     if mm:
-        data_dict, dim = load_mm(path, w_cache, skip_row, skip_col, seps, transpose, label, path_label, col_name)
+        data_dict, dim = load_mm(file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, col_name)
     elif np:
-        data_dict, dim = load_mat(path, w_cache, skip_row, skip_col, seps, transpose, label, path_label, col_name)
+        data_dict, dim = load_mat(file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, col_name)
     elif cache:
-        data_dict, dim = load_cache(path)
+        data_dict, dim = load_cache(file_path)
     else:
         raise Exception
     return data_dict, dim
@@ -51,11 +51,11 @@ def write_cache(data_dict):
         pkl.dump(data_dict, f)
 
 
-def load_mm(path_to_file, cache, skip_row, skip_col, seps, transpose, label, path_to_label, col_name="Group"):
-    if not os.path.isfile(path_to_file):
-        raise FileNotFoundError("File {} not found.".format(path_to_file))
-    print("Loading data from: {}".format(path_to_file))
-    exp_mat_mm = mmread(path_to_file)
+def load_mm(file_path, cache, skip_row, skip_col, seps, transpose, label, label_path, col_name="Group"):
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError("File {} not found.".format(file_path))
+    print("Loading data from: {}".format(file_path))
+    exp_mat_mm = mmread(file_path)
     exp_mat_dense = exp_mat_mm.todense()
     data = pd.DataFrame(exp_mat_mm,
                       range(skip_row, exp_mat_dense.shape[0] + 1), range(skip_col, exp_mat_dense.shape[1] + 1))
@@ -63,7 +63,7 @@ def load_mm(path_to_file, cache, skip_row, skip_col, seps, transpose, label, pat
     print("Expression Matrix Shape: {}".format(data.shape))
 
     if label:
-        label = load_label(path_to_label, seps, col_name)
+        label = load_label(label_path, seps, col_name)
         data_dict = {'data': data, 'label': label}
     else:
         data_dict = {'data': data}
@@ -72,17 +72,17 @@ def load_mm(path_to_file, cache, skip_row, skip_col, seps, transpose, label, pat
     return data_dict, data_dict['data'].shape[1]
 
 
-def load_mat(path_to_file, cache, skip_row, skip_col, seps, transpose, label, path_to_label, col_name="Group"):
-    if not os.path.isfile(path_to_file):
-        raise FileNotFoundError("File {} not found.".format(path_to_file))
-    print("Loading data from: {}".format(path_to_file))
-    data = pd.read_csv(path_to_file, skiprows=skip_row, sep=seps, header=None)
+def load_mat(file_path, cache, skip_row, skip_col, seps, transpose, label, label_path, col_name="Group"):
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError("File {} not found.".format(file_path))
+    print("Loading data from: {}".format(file_path))
+    data = pd.read_csv(file_path, skiprows=skip_row, sep=seps, header=None)
     data = data.iloc[:, skip_col:].astype(float)
     data = data.to_numpy() if not transpose else data.to_numpy().T
     print("Expression Matrix Shape: {}".format(data.shape))
 
     if label:
-        label = load_label(path_to_label, seps, col_name)
+        label = load_label(label_path, seps, col_name)
         data_dict = {'data': data, 'label': label}
     else:
         data_dict = {'data': data}
@@ -91,19 +91,19 @@ def load_mat(path_to_file, cache, skip_row, skip_col, seps, transpose, label, pa
     return data_dict, data_dict['data'].shape[1]
 
 
-def load_cache(path_to_cache):
-    if not os.path.isfile(path_to_cache):
-        raise FileNotFoundError("Cache {} not found.".format(path_to_cache))
-    print("Loading cache from: {}".format(path_to_cache))
-    with open(path_to_cache, 'rb') as f:
+def load_cache(cache_path):
+    if not os.path.isfile(cache_path):
+        raise FileNotFoundError("Cache {} not found.".format(cache_path))
+    print("Loading cache from: {}".format(cache_path))
+    with open(cache_path, 'rb') as f:
         data_dict = pkl.load(f)
     print("Cached Shape: {}".format(data_dict['data'].shape))
     return data_dict, data_dict['data'].shape[1]
 
 
-def load_label(path_to_label, seps, col_name):
-    print("Loading label from: {}".format(path_to_label))
-    label = pd.read_csv(path_to_label, sep=seps, usecols=[col_name])
+def load_label(label_path, seps, col_name):
+    print("Loading label from: {}".format(label_path))
+    label = pd.read_csv(label_path, sep=seps, usecols=[col_name])
     label = np.squeeze(label.to_numpy().astype(np.int))
     print("Label Shape: {} with {} clusters".format(label.shape, np.unique(label)))
     return label
@@ -167,3 +167,23 @@ def add_noise(data_dict, noise_type, prob=0.2, sig=0.5):
         raise NotImplementedError
     data_dict['data'] = data
     return data_dict
+
+
+class Logger():
+    def __init__(self, path, filename, loss_logger=False):
+        self.filename = filename
+        self.path = path
+        if not os.path.exists(self.path):
+            os.mkdir(self.path)
+            print("Directory {} created for logging.".format(self.path))
+        self.f = open(os.path.join(self.path, self.filename), 'w')
+        if not loss_logger:
+            self.f.write("EPOCH\t\t# Clusters\t\tARI\t\tSilhouette\t\tTime\n")
+        else:
+            self.f.write("EPOCH\t\tStep\t\tTrain Loss\t\tValidation Loss\n")
+
+    def log(self, line):
+        self.f.write(line + '\n')
+
+    def close(self):
+        self.f.close()
