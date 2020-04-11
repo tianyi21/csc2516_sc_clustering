@@ -114,20 +114,15 @@ class _VAESC(nn.Module):
         self.enc_1_fc = nn.Sequential(nn.Linear(self.dim[0], self.dim[1]), nn.ReLU())
         self.enc_2_fc = nn.Sequential(nn.Linear(self.dim[1], self.dim[2]), nn.BatchNorm1d(self.dim[2]), nn.Dropout(0.5), nn.ReLU())
         self.enc_3_fc = nn.Sequential(nn.Linear(self.dim[2], self.dim[3]), nn.Dropout(0.5), nn.ReLU())
-        self.enc_4_fc = nn.Sequential(nn.Linear(self.dim[3], self.dim[4]), nn.BatchNorm1d(self.dim[4]), nn.Dropout(0.5), nn.ReLU())
 
-        self.enc_5_vae_mu = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.ReLU())
-        self.enc_5_vae_std = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.ReLU())
-        self.enc_6_vae_mu = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.ReLU())
-        self.enc_6_vae_std = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.ReLU())
-        self.enc_7_vae_mu = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]))
-        self.enc_7_vae_std = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]))
+        self.enc_4_vae_mu = nn.Sequential(nn.Linear(self.dim[3], self.dim[4]), nn.BatchNorm1d(self.dim[4]), nn.ReLU())
+        self.enc_4_vae_std = nn.Sequential(nn.Linear(self.dim[3], self.dim[4]), nn.BatchNorm1d(self.dim[4]), nn.ReLU())
+        self.enc_5_vae_mu = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]))
+        self.enc_5_vae_std = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]))
 
-        self.dec_7_vae = nn.Sequential(nn.Linear(self.dim[7], self.dim[6]), nn.ReLU())
-        self.dec_6_vae = nn.Sequential(nn.Linear(self.dim[6], self.dim[5]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
         self.dec_5_vae = nn.Sequential(nn.Linear(self.dim[5], self.dim[4]), nn.ReLU())
+        self.dec_4_vae = nn.Sequential(nn.Linear(self.dim[4], self.dim[3]), nn.BatchNorm1d(self.dim[3]), nn.ReLU())
 
-        self.dec_4_fc = nn.Sequential(nn.Linear(self.dim[4], self.dim[3]), nn.BatchNorm1d(self.dim[3]), nn.Dropout(0.5), nn.ReLU())
         self.dec_3_fc = nn.Sequential(nn.Linear(self.dim[3], self.dim[2]), nn.Dropout(0.5), nn.ReLU())
         self.dec_2_fc = nn.Sequential(nn.Linear(self.dim[2], self.dim[1]), nn.BatchNorm1d(self.dim[1]), nn.Dropout(0.5), nn.ReLU())
         self.dec_1_fc = nn.Sequential(nn.Linear(self.dim[1], self.dim[0]), nn.ReLU())
@@ -139,16 +134,16 @@ class _VAESC(nn.Module):
         return z
 
     def bottleneck(self, h):
-        mu = self.enc_7_vae_mu(self.enc_6_vae_mu(self.enc_5_vae_mu(h)))
-        logvar = self.enc_7_vae_std(self.enc_6_vae_std(self.enc_5_vae_std(h)))
+        mu = self.enc_5_vae_mu(self.enc_4_vae_mu(h))
+        logvar = self.enc_5_vae_std(self.enc_4_vae_std(h))
         z = self.reparameterize(mu, logvar)
         return z, mu, logvar
 
     def forward(self, x):
-        h = self.enc_4_fc(self.enc_3_fc(self.enc_2_fc(self.enc_1_fc(x))))
+        h = self.enc_3_fc(self.enc_2_fc(self.enc_1_fc(x)))
         z, mu, logvar = self.bottleneck(h)
-        z = self.dec_5_vae(self.dec_6_vae(self.dec_7_vae(z)))
-        y = self.dec_1_fc(self.dec_2_fc(self.dec_3_fc(self.dec_4_fc(z))))
+        z = self.dec_4_vae(self.dec_5_vae(z))
+        y = self.dec_1_fc(self.dec_2_fc(self.dec_3_fc(z)))
         return y, mu, logvar
 
     @classmethod
