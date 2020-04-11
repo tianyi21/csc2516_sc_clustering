@@ -158,7 +158,7 @@ def parse_args():
                         help="Learning rate for pre-trained parameters")
     parser.add_argument('--model',
                         dest="model",
-                        default="ae",
+                        default="vae",
                         help="Model: AE / VAE")
     parser.add_argument('--noise',
                         dest="noise",
