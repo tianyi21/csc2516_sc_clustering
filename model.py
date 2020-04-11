@@ -106,7 +106,7 @@ class _AESC(nn.Module):
 
 class _VAESC(nn.Module):
     # dim = [8000, 2048, 1024, 512, 256, 128, 64]
-    dim = [8000, 2048, 1024, 512, 256, 64, 32]
+    dim = [8000, 2048, 1024, 512, 256, 64, 32, 16]
     device = "cuda"
 
     def __init__(self):
@@ -118,9 +118,12 @@ class _VAESC(nn.Module):
 
         self.enc_5_vae_mu = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
         self.enc_5_vae_std = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
-        self.enc_6_vae_mu = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]))
-        self.enc_6_vae_std = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]))
+        self.enc_6_vae_mu = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.ReLU())
+        self.enc_6_vae_std = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.ReLU())
+        self.enc_7_vae_mu = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]))
+        self.enc_7_vae_std = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]))
 
+        self.dec_7_vae = nn.Sequential(nn.Linear(self.dim[7], self.dim[6]))
         self.dec_6_vae = nn.Sequential(nn.Linear(self.dim[6], self.dim[5]))
         self.dec_5_vae = nn.Sequential(nn.Linear(self.dim[5], self.dim[4]), nn.BatchNorm1d(self.dim[4]), nn.ReLU())
 
@@ -136,15 +139,15 @@ class _VAESC(nn.Module):
         return z
 
     def bottleneck(self, h):
-        mu = self.enc_6_vae_mu(self.enc_5_vae_mu(h))
-        logvar = self.enc_6_vae_std(self.enc_5_vae_std(h))
+        mu = self.enc_7_vae_mu(self.enc_6_vae_mu(self.enc_5_vae_mu(h)))
+        logvar = self.enc_7_vae_std(self.enc_6_vae_std(self.enc_5_vae_std(h)))
         z = self.reparameterize(mu, logvar)
         return z, mu, logvar
 
     def forward(self, x):
         h = self.enc_4_fc(self.enc_3_fc(self.enc_2_fc(self.enc_1_fc(x))))
         z, mu, logvar = self.bottleneck(h)
-        z = self.dec_5_vae(self.dec_6_vae(z))
+        z = self.dec_5_vae(self.dec_6_vae(self.dec_7_vae(z)))
         y = self.dec_1_fc(self.dec_2_fc(self.dec_3_fc(self.dec_4_fc(z))))
         return y, mu, logvar
 
@@ -165,9 +168,8 @@ def vl_loop(model, loader, sel, return_sel):
                 (data) = data_batch[0]
 
             if sel.lower() == 'ae':
-                y, x_enc, q = model(data)
+                y, x_enc = model(data)
                 embedding.extend(x_enc.detach().cpu().numpy())
-                loss_w = compute_loss('ae', data, y, x_enc, p)
 
                 loss_w *= LOSS_WEIGHT["mse"]
                 loss_vl = loss_w
