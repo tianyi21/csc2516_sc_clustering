@@ -106,7 +106,7 @@ class _AESC(nn.Module):
 
 class _VAESC(nn.Module):
     # dim = [8000, 2048, 1024, 512, 256, 128, 64]
-    dim = [8000, 2048, 1024, 512, 256, 64, 32, 16]
+    dim = [8000, 2048, 1024, 512, 256, 64, 16, 8]
     device = "cuda"
 
     def __init__(self):
