@@ -116,8 +116,8 @@ class _VAESC(nn.Module):
         self.enc_3_fc = nn.Sequential(nn.Linear(self.dim[2], self.dim[3]), nn.Dropout(0.5), nn.ReLU())
         self.enc_4_fc = nn.Sequential(nn.Linear(self.dim[3], self.dim[4]), nn.BatchNorm1d(self.dim[4]), nn.Dropout(0.5), nn.ReLU())
 
-        self.enc_5_vae_mu = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
-        self.enc_5_vae_std = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
+        self.enc_5_vae_mu = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.ReLU())
+        self.enc_5_vae_std = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.ReLU())
         self.enc_6_vae_mu = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.ReLU())
         self.enc_6_vae_std = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.ReLU())
         self.enc_7_vae_mu = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]))
