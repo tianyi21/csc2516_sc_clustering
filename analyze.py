@@ -167,13 +167,12 @@ def run_k_means(data_dict, data, t_sne_embedding, visualization, cls_path, model
     return k_means_cls_result
 
 
-def run_dbscan(data, label, output_embedding, t_sne_embedding, cls_path, visualization, model, epoch, emb_type="tsne", eps=5, min_sam=None, logger=None):
+def run_dbscan(data, label, output_embedding, t_sne_embedding, cls_path, visualization, model, epoch, emb_type="tsne", eps=5, min_samples=20, logger=None):
     print(">>> Running DBSCAN")
     if not os.path.exists(cls_path):
         print(">>> Directory {} created.".format(cls_path))
         os.mkdir(cls_path)
 
-    min_samples = 20 if min_sam is None else min_sam
     cls = DBSCAN(eps=eps, min_samples=min_samples)
     tic = time.time()
     cls.fit(output_embedding)
