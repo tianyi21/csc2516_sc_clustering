@@ -173,7 +173,7 @@ def run_dbscan(data, label, output_embedding, t_sne_embedding, cls_path, visuali
         print(">>> Directory {} created.".format(cls_path))
         os.mkdir(cls_path)
 
-    min_samples = int(data.shape[0] * 0.02) if min_sam is None else min_sam
+    min_samples = 20 if min_sam is None else min_sam
     cls = DBSCAN(eps=eps, min_samples=min_samples)
     tic = time.time()
     cls.fit(output_embedding)
