@@ -118,12 +118,12 @@ class _VAESC(nn.Module):
         self.enc_5_fc = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.Dropout(0.5), nn.ReLU())
         self.enc_6_fc = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.Dropout(0.5), nn.ReLU())
 
-        self.enc_7_vae_mu = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
-        self.enc_7_vae_std = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
+        self.enc_7_vae_mu = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]), nn.BatchNorm1d(self.dim[7]), nn.ReLU())
+        self.enc_7_vae_std = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]), nn.BatchNorm1d(self.dim[7]), nn.ReLU())
         self.enc_8_vae_mu = nn.Sequential(nn.Linear(self.dim[7], self.dim[8]), nn.ReLU())
         self.enc_8_vae_std = nn.Sequential(nn.Linear(self.dim[7], self.dim[8]), nn.ReLU())
-        self.enc_9_vae_mu = nn.Sequential(nn.Linear(self.dim[8], self.dim[9]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
-        self.enc_9_vae_std = nn.Sequential(nn.Linear(self.dim[8], self.dim[9]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
+        self.enc_9_vae_mu = nn.Sequential(nn.Linear(self.dim[8], self.dim[9]), nn.BatchNorm1d(self.dim[9]), nn.ReLU())
+        self.enc_9_vae_std = nn.Sequential(nn.Linear(self.dim[8], self.dim[9]), nn.BatchNorm1d(self.dim[9]), nn.ReLU())
         self.enc_10_vae_mu = nn.Sequential(nn.Linear(self.dim[9], self.dim[10]))
         self.enc_10_vae_std = nn.Sequential(nn.Linear(self.dim[9], self.dim[10]))
 
