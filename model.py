@@ -106,7 +106,7 @@ class _AESC(nn.Module):
 
 class _VAESC(nn.Module):
     # dim = [8000, 2048, 1024, 512, 256, 128, 64]
-    dim = [8000, 2048, 1024, 512, 256, 64, 32]
+    dim = [8000, 2048, 1024, 512, 256, 64, 32, 16, 8, 4, 2]
     device = "cuda"
 
     def __init__(self):
@@ -115,15 +115,25 @@ class _VAESC(nn.Module):
         self.enc_2_fc = nn.Sequential(nn.Linear(self.dim[1], self.dim[2]), nn.BatchNorm1d(self.dim[2]), nn.Dropout(0.5), nn.ReLU())
         self.enc_3_fc = nn.Sequential(nn.Linear(self.dim[2], self.dim[3]), nn.Dropout(0.5), nn.ReLU())
         self.enc_4_fc = nn.Sequential(nn.Linear(self.dim[3], self.dim[4]), nn.BatchNorm1d(self.dim[4]), nn.Dropout(0.5), nn.ReLU())
+        self.enc_5_fc = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.Dropout(0.5), nn.ReLU())
+        self.enc_6_fc = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.Dropout(0.5), nn.ReLU())
 
-        self.enc_5_vae_mu = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
-        self.enc_5_vae_std = nn.Sequential(nn.Linear(self.dim[4], self.dim[5]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
-        self.enc_6_vae_mu = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]))
-        self.enc_6_vae_std = nn.Sequential(nn.Linear(self.dim[5], self.dim[6]))
+        self.enc_7_vae_mu = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
+        self.enc_7_vae_std = nn.Sequential(nn.Linear(self.dim[6], self.dim[7]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
+        self.enc_8_vae_mu = nn.Sequential(nn.Linear(self.dim[7], self.dim[8]), nn.ReLU())
+        self.enc_8_vae_std = nn.Sequential(nn.Linear(self.dim[7], self.dim[8]), nn.ReLU())
+        self.enc_9_vae_mu = nn.Sequential(nn.Linear(self.dim[8], self.dim[9]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
+        self.enc_9_vae_std = nn.Sequential(nn.Linear(self.dim[8], self.dim[9]), nn.BatchNorm1d(self.dim[5]), nn.ReLU())
+        self.enc_10_vae_mu = nn.Sequential(nn.Linear(self.dim[9], self.dim[10]))
+        self.enc_10_vae_std = nn.Sequential(nn.Linear(self.dim[9], self.dim[10]))
 
-        self.dec_6_vae = nn.Sequential(nn.Linear(self.dim[6], self.dim[5]))
-        self.dec_5_vae = nn.Sequential(nn.Linear(self.dim[5], self.dim[4]), nn.BatchNorm1d(self.dim[4]), nn.ReLU())
+        self.dec_10_vae = nn.Sequential(nn.Linear(self.dim[10], self.dim[9]), nn.ReLU())
+        self.dec_9_vae = nn.Sequential(nn.Linear(self.dim[9], self.dim[8]), nn.BatchNorm1d(self.dim[8]), nn.ReLU())
+        self.dec_8_vae = nn.Sequential(nn.Linear(self.dim[8], self.dim[7]), nn.ReLU())
+        self.dec_7_vae = nn.Sequential(nn.Linear(self.dim[7], self.dim[6]), nn.BatchNorm1d(self.dim[6]), nn.ReLU())
 
+        self.dec_6_fc = nn.Sequential(nn.Linear(self.dim[6], self.dim[5]), nn.BatchNorm1d(self.dim[5]), nn.Dropout(0.5), nn.ReLU())
+        self.dec_5_fc = nn.Sequential(nn.Linear(self.dim[5], self.dim[4]), nn.Dropout(0.5), nn.ReLU())
         self.dec_4_fc = nn.Sequential(nn.Linear(self.dim[4], self.dim[3]), nn.BatchNorm1d(self.dim[3]), nn.Dropout(0.5), nn.ReLU())
         self.dec_3_fc = nn.Sequential(nn.Linear(self.dim[3], self.dim[2]), nn.Dropout(0.5), nn.ReLU())
         self.dec_2_fc = nn.Sequential(nn.Linear(self.dim[2], self.dim[1]), nn.BatchNorm1d(self.dim[1]), nn.Dropout(0.5), nn.ReLU())
@@ -136,16 +146,16 @@ class _VAESC(nn.Module):
         return z
 
     def bottleneck(self, h):
-        mu = self.enc_6_vae_mu(self.enc_5_vae_mu(h))
-        logvar = self.enc_6_vae_std(self.enc_5_vae_std(h))
+        mu = self.enc_10_vae_mu(self.enc_9_vae_mu(self.enc_8_vae_mu(self.enc_7_vae_mu(h))))
+        logvar = self.enc_10_vae_std(self.enc_9_vae_std(self.enc_8_vae_std(self.enc_7_vae_std(h))))
         z = self.reparameterize(mu, logvar)
         return z, mu, logvar
 
     def forward(self, x):
-        h = self.enc_4_fc(self.enc_3_fc(self.enc_2_fc(self.enc_1_fc(x))))
+        h = self.enc_6_fc(self.enc_5_fc(self.enc_4_fc(self.enc_3_fc(self.enc_2_fc(self.enc_1_fc(x))))))
         z, mu, logvar = self.bottleneck(h)
-        z = self.dec_5_vae(self.dec_6_vae(z))
-        y = self.dec_1_fc(self.dec_2_fc(self.dec_3_fc(self.dec_4_fc(z))))
+        z = self.dec_7_vae(self.dec_8_vae(self.dec_9_vae(self.dec_10_vae(z))))
+        y = self.dec_1_fc(self.dec_2_fc(self.dec_3_fc(self.dec_4_fc(self.dec_5_fc(self.dec_6_fc(z))))))
         return y, mu, logvar
 
     @classmethod
