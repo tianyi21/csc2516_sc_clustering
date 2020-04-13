@@ -171,20 +171,23 @@ def add_noise(data_dict, noise_type, prob=0.2, sig=0.5):
 
 
 class Logger():
-    def __init__(self, path, filename, loss_logger=False):
+    def __init__(self, path, filename, loss_logger=False, benchmark_logger=False):
         self.filename = filename
         self.path = path
         if not os.path.exists(self.path):
             os.mkdir(self.path)
             print("Directory {} created for logging.".format(self.path))
         self.f = open(os.path.join(self.path, self.filename), 'w')
-        if not loss_logger:
+        if not loss_logger and not benchmark_logger:
             self.f.write("EPOCH\t\t# Clusters\t\tARI\t\tSilhouette\t\tTime\n")
-        else:
+        elif loss_logger:
             self.f.write("EPOCH\t\tStep\t\tTrain Loss\t\tValidation Loss\n")
+        elif benchmark_logger:
+            self.f.write("Dimension\t\tMethod\t\t# Cluster\t\tARI\t\tSilhouette\t\tTime\n")
 
     def log(self, line):
         self.f.write(line + '\n')
 
     def close(self):
         self.f.close()
+

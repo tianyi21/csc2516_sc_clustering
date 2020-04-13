@@ -9,15 +9,17 @@
 
 """
 
-from utils import load_data
+from utils import load_mat, load_label, Logger
 from eval import adjusted_rand_score, silhouette_score
 from cfgs import *
+
 
 import os
 import argparse
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.linear_model import LogisticRegression
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle as pkl
@@ -26,65 +28,12 @@ import time
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-m',
-                       dest="mm",
-                       action="store_true",
-                       help="Set -> Read Matrix Marker format")
-    group.add_argument('-n',
-                       dest="np",
-                       action="store_true",
-                       help="Set -> Read general csv format")
-    group.add_argument('-c',
-                       dest="cache",
-                       action="store_true",
-                       help="Set -> Read cached data")
-    parser.add_argument('-l',
-                        dest="label",
-                        action="store_false",
-                        help="Set -> DO NOT read label during training")
-    parser.add_argument('--path',
-                        dest="path",
-                        default="./cache/cache.pkl",
-                        help="Specify the path of data/cache")
+    parser.add_argument('--data_path',
+                        dest="data_path",
+                        help="Path to data")
     parser.add_argument('--label_path',
                         dest="label_path",
-                        default="./gt.csv",
-                        help="Specify the path of label")
-    parser.add_argument('--cache_name',
-                        dest="cache_name",
-                        default="cache.pkl",
-                        help="Name for cache to be written")
-    parser.add_argument('-t',
-                        dest="transpose",
-                        action="store_true",
-                        help="Set -> Transpose the data read")
-    parser.add_argument('-w',
-                        dest="write_cache",
-                        action="store_false",
-                        help="Set -> Write to cache if read from data")
-    parser.add_argument('--seps',
-                        dest="seps",
-                        default=',',
-                        help="Data separator, e.g., \\t, ,")
-    parser.add_argument('--skiprow',
-                        dest="skip_row",
-                        type=int,
-                        default=1,
-                        help="Skip row")
-    parser.add_argument('--skipcol',
-                        dest="skip_col",
-                        type=int,
-                        default=1,
-                        help="Skip column")
-    parser.add_argument('--col_name',
-                        dest="col_name",
-                        default="Group",
-                        help="Label column name")
-    parser.add_argument('--cache_path',
-                        dest="cache_path",
-                        default="./cache/",
-                        help="TSNE embedding cache")
+                        help="Path to label")
     args = parser.parse_args()
     return args
 
@@ -95,12 +44,15 @@ def linear_correlation(embedding, cluster):
     return clf.score
 
 
-def t_sne_visualize(data, labels, cls_path, plot=False, epoch=None, model=None, sets=None):
+def t_sne_visualize(data, labels, cls_path, plot=False, epoch=None, model=None, sets=None, n_component=2):
     print(">>> Running T-SNE embedding")
     if not os.path.exists(cls_path):
         print(">>> Directory {} created.".format(cls_path))
         os.mkdir(cls_path)
-    t_sne_embedding = TSNE(n_components=2).fit_transform(data)
+    tic = time.time()
+    t_sne_embedding = TSNE(n_components=n_component).fit_transform(data)
+    toc = time.time()
+    print("T-SNE takes {} s".format(toc - tic, 4))
     if labels is None:
         plt.scatter(t_sne_embedding[:, 0], t_sne_embedding[:, 1], s=3)
     else:
@@ -197,7 +149,7 @@ def run_dbscan(output_embedding, label, origin_data, t_sne_embedding, cls_path, 
             sil = silhouette_score(origin_data, cls.labels_)
         except ValueError: # Dummy
             sil = -2
-        print("\t Stats: ARI={}, Silhouette={}.".format(np.round(ari, 4), np.round(sil, 4)))
+        print("\tStats: ARI={}, Silhouette={}.".format(np.round(ari, 4), np.round(sil, 4)))
     else: # Dummy
         ari = -2
         sil = -2
@@ -233,13 +185,13 @@ def run_dbscan(output_embedding, label, origin_data, t_sne_embedding, cls_path, 
     return cls.labels_
 
 
-def run_t_sne(data, label, cache_path, cls_path=None, cache_name="tsne.pkl", epoch=None, model=None, sets=None):
+def run_t_sne(data, label, cache_path, cls_path=None, cache_name="tsne.pkl", epoch=None, model=None, sets=None, n_component=2, rtn_time=False):
     if not os.path.exists(cache_path):
         print(">>> Directory {} created.".format(cache_path))
         os.mkdir(cache_path)
 
     if not os.path.isfile(os.path.join(cache_path, cache_name)):
-        t_sne_embedding = t_sne_visualize(data, label, cls_path, epoch=epoch, model=model, sets=sets)
+        t_sne_embedding = t_sne_visualize(data, label, cls_path, epoch=epoch, model=model, sets=sets, n_component=n_component)
         with open(os.path.join(cache_path, cache_name), 'wb') as f:
             pkl.dump(t_sne_embedding, f)
     else:
@@ -250,11 +202,85 @@ def run_t_sne(data, label, cache_path, cls_path=None, cache_name="tsne.pkl", epo
     return t_sne_embedding
 
 
+def run_dr(data, method, cache_path, cache_name, n_component):
+    if not os.path.exists(cache_path):
+        print(">>> Directory {} created.".format(cache_path))
+        os.mkdir(cache_path)
+
+    if not os.path.isfile(os.path.join(cache_path, cache_name)):
+        tic = time.time()
+        if method == "PCA":
+            embedding = PCA(n_components=n_component).fit_transform(data)
+        elif method == "TSNE":
+            embedding = TSNE(n_components=n_component).fit_transform(data)
+        else:
+            raise NotImplementedError
+        toc = time.time()
+        t = toc - tic
+        print("DR with {} takes {} s".format(method, np.round(t, 4)))
+        with open(os.path.join(cache_path, cache_name), 'wb') as f:
+            pkl.dump(embedding, f)
+    else:
+        print("DR cache with {} found at {}".format(method, os.path.join(cache_path, cache_name)))
+        with open(os.path.join(cache_path, cache_name), 'rb') as f:
+            embedding = pkl.load(f)
+        t = 0
+
+    return embedding, t
+
+
 if __name__ == "__main__":
     arg = parse_args()
-    data_dict, _ = load_data(arg.mm, arg.np, arg.cache, arg.path, arg.write_cache, arg.skip_row, arg.skip_col, arg.seps,
-                             arg.transpose, arg.label, arg.label_path, arg.cache_name, arg.col_name)
+    print("========Call with Arguments========")
+    print(arg)
 
-    t_sne_embedding = run_t_sne(data_dict, arg.cache_path, CLS_PATH)
-    # k_means_cls_result = run_k_means(data_dict, t_sne_embedding, CLS_PATH)
+    if not os.path.exists(RESULTS_PATH):
+        os.mkdir(RESULTS_PATH)
+        print(">>> Directory {} created.".format(RESULTS_PATH))
+
+    if not os.path.exists(BCM_PATH):
+        os.mkdir(BCM_PATH)
+        print(">>> Directory {} created.".format(BCM_PATH))
+
+    print("\n========Reading Data========")
+    data, _= load_mat(arg.data_path, False, 1, 1, ',', True, False, None, None)
+    label = load_label(arg.label_path, ',', '0')
+
+    k_means_logger = Logger(LOG_PATH, "Benchmark_K_MEANS.log", benchmark_logger=True)
+    dbscan_logger = Logger(LOG_PATH, "Benchmark_DBSCAN.log", benchmark_logger=True)
+
+    k_means_results = {}
+    dbscan_results = {}
+
+    print("\n========Benchmarking========")
+
+    for dim in DR_DIM:
+        for method in ["PCA", "TSNE"]:
+            embedding, t_dr = run_dr(data, method, "./cache", "{}_{}.pkl".format(method, dim), dim)
+            for k in K_MEANS_DIM:
+                print(">>> Running KMeans with k={}".format(k))
+                tic = time.time()
+                cls = KMeans(n_clusters=k).fit(embedding)
+                toc = time.time()
+                t_cls = toc - tic
+                ari = adjusted_rand_score(label, cls.labels_)
+                try:
+                    sil = silhouette_score(data, cls.labels_)
+                except ValueError:
+                    sil = -2
+                print("\tStats: ARI: {}\tSilhouette: {}".format(np.round(ari, 4), np.round(sil, 4)))
+                k_means_logger.log("{}\t\t{}\t\t{}\t\t{}\t\t{}\t\t{}".format(dim, method, len(np.unique(cls.labels_)), ari, sil, t_dr + t_cls))
+            print(">>> Running DBSCAN")
+            tic = time.time()
+            cls = DBSCAN(eps=5, min_samples=20).fit(embedding)
+            toc = time.time()
+            t_cls = toc - tic
+            ari = adjusted_rand_score(label, cls.labels_)
+            try:
+                sil = silhouette_score(data, cls.labels_)
+            except ValueError:
+                sil = -2
+            print("\tDBSCAN finds {} clusters".format(len(np.unique(cls.labels_))))
+            print("\tStats: ARI: {}\tSilhouette: {}".format(np.round(ari, 4), np.round(sil, 4)))
+            dbscan_logger.log("{}\t\t{}\t\t{}\t\t{}\t\t{}\t\t{}".format(dim, method, len(np.unique(cls.labels_)), ari, sil, t_dr + t_cls))
 
