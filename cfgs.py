@@ -40,7 +40,7 @@ LOG_PATH = os.path.join(RESULTS_PATH, "logs")
 # For Benchmarking
 DR_METHOD = ["TSNE", "PCA"]
 
-DR_DIM = [32, 16, 8, 2]
+DR_DIM = [64, 32, 16, 8, 4, 2]
 
 BCM_PATH = os.path.join(RESULTS_PATH, "benchmark")
 
