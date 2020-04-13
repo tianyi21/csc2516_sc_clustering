@@ -50,7 +50,7 @@ def t_sne_visualize(data, labels, cls_path, plot=False, epoch=None, model=None, 
         print(">>> Directory {} created.".format(cls_path))
         os.mkdir(cls_path)
     tic = time.time()
-    t_sne_embedding = TSNE(n_components=n_component).fit_transform(data)
+    t_sne_embedding = TSNE(n_components=n_component, n_jobs=T_SNE_N_JOB).fit_transform(data)
     toc = time.time()
     print("T-SNE takes {} s".format(toc - tic, 4))
     if labels is None:
@@ -212,7 +212,7 @@ def run_dr(data, method, cache_path, cache_name, n_component):
         if method == "PCA":
             embedding = PCA(n_components=n_component).fit_transform(data)
         elif method == "TSNE":
-            embedding = TSNE(n_components=n_component).fit_transform(data)
+            embedding = TSNE(n_components=n_component, n_jobs=T_SNE_N_JOB).fit_transform(data)
         else:
             raise NotImplementedError
         toc = time.time()
