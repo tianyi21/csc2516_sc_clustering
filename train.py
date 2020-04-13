@@ -281,7 +281,8 @@ if __name__ == "__main__":
 
                 # Validation
                 model.eval()
-                epoch_vl_loss, _, _ = vl_loop(model, vl_loader, arg.model, 'vl')
+                loader = vl_loader if vl_loader is not None else tr_loader
+                epoch_vl_loss, _, _ = vl_loop(model, loader, arg.model, 'vl')
                 logger_loss.log("{}\t\t{}\t\t{}\t\t{}".format(epoch + 1, step + 1, loss.item(), epoch_vl_loss))
 
         print("Averaged Epoch Loss: {}\n".format(epoch_tr_loss / len(tr_loader.dataset)))
@@ -289,11 +290,12 @@ if __name__ == "__main__":
         # Visualize
         if (epoch + 1) % VIS_EPOCH == 0:
             model.eval()
-            embedding, label = vl_loop(model, vl_loader, arg.model, 'vis')
+            loader = vl_loader if vl_loader is not None else tr_loader
+            embedding, label = vl_loop(model, loader, arg.model, 'vis')
             # T-SNE plot current embedding
             cur_tsne = t_sne_visualize(embedding, label, VIS_PATH, epoch=epoch + 1, model=arg.model.lower())
             try:
-                (data, label) = vl_loader.dataset[:]
+                (data, label) = loader.dataset[:]
                 # T-SNE plot of vl_data
                 t_sne_embedding = run_t_sne(data.cpu().numpy(), label.cpu().numpy(), "./cache",
                                             cls_path=VIS_PATH,
