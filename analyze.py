@@ -9,7 +9,7 @@
 
 """
 
-from utils import load_data, random_split
+from utils import load_data
 from eval import adjusted_rand_score, silhouette_score
 from cfgs import *
 
@@ -51,6 +51,10 @@ def parse_args():
                         dest="label_path",
                         default="./gt.csv",
                         help="Specify the path of label")
+    parser.add_argument('--cache_name',
+                        dest="cache_name",
+                        default="cache.pkl",
+                        help="Name for cache to be written")
     parser.add_argument('-t',
                         dest="transpose",
                         action="store_true",
@@ -126,27 +130,32 @@ def k_means_cls(data, label, k, original_data=None):
     cls = KMeans(n_clusters=k, random_state=2516).fit(data)
     toc = time.time()
     t = np.round(toc - tic, 4)
-    ari = adjusted_rand_score(cls.labels_, label)
-    try:
-        sil = silhouette_score(data, cls.labels_) if original_data is None else silhouette_score(original_data, cls.labels_)
-    except ValueError:
-        sil = -2 # Dummy
-    print("\tStats: ARI: {}\tSilhouette: {}".format(np.round(ari, 4), np.round(sil, 4)))
+    if label is not None:
+        ari = adjusted_rand_score(cls.labels_, label)
+        try:
+            sil = silhouette_score(data, cls.labels_) if original_data is None else silhouette_score(original_data, cls.labels_)
+        except ValueError: # Dummy
+            sil = -2
+        print("\tStats: ARI: {}\tSilhouette: {}".format(np.round(ari, 4), np.round(sil, 4)))
+    else: # Dummy
+        ari = -2
+        sil = -2
     print("\tElapsed time: {}s".format(t))
     return cls.labels_, ari, sil, t
 
 
-def run_k_means(data_dict, data, t_sne_embedding, visualization, cls_path, model=None, epoch=None, emb_type="tsne", logger=None):
+def run_k_means(output_embedding, label, origin_data, t_sne_embedding, visualization, cls_path, model=None,
+                epoch=None, emb_type="tsne", logger=None):
     if not os.path.exists(visualization):
         print(">>> Directory {} created.".format(visualization))
         os.mkdir(visualization)
     k_means_cls_result = {}
     for k in K_MEANS_DIM:
-        k_means_labels, ari, sil, t = k_means_cls(data_dict['data'], data_dict['label'], k, original_data=data)
+        k_means_labels, ari, sil, t = k_means_cls(output_embedding, label, k, original_data=origin_data)
         k_means_unique_label = np.unique(k_means_labels)
-        for label in k_means_unique_label:
-            plt.scatter(t_sne_embedding[k_means_labels == label, 0], t_sne_embedding[k_means_labels == label, 1], s=3,
-                        label=label)
+        for lb in k_means_unique_label:
+            plt.scatter(t_sne_embedding[k_means_labels == lb, 0], t_sne_embedding[k_means_labels == lb, 1], s=3,
+                        label=lb)
         plt.legend(loc="upper right")
         plt.title("KMeans: k={} ARI={} Sil={}".format(k, np.round(ari, 4), np.round(sil, 4)))
         if model is None:
@@ -167,7 +176,8 @@ def run_k_means(data_dict, data, t_sne_embedding, visualization, cls_path, model
     return k_means_cls_result
 
 
-def run_dbscan(data, label, output_embedding, t_sne_embedding, cls_path, visualization, model, epoch, emb_type="tsne", eps=5, min_samples=20, logger=None):
+def run_dbscan(output_embedding, label, origin_data, t_sne_embedding, cls_path, visualization, model, epoch,
+               emb_type="tsne", eps=5, min_samples=20, logger=None):
     print(">>> Running DBSCAN")
     if not os.path.exists(cls_path):
         print(">>> Directory {} created.".format(cls_path))
@@ -179,17 +189,19 @@ def run_dbscan(data, label, output_embedding, t_sne_embedding, cls_path, visuali
     toc = time.time()
     t = np.round(toc - tic, 4)
     unique_label = np.unique(cls.labels_)
-    ari = adjusted_rand_score(cls.labels_, label)
-    try:
-        sil = silhouette_score(data, cls.labels_)
-    except ValueError:
-        sil = -2 # Dummy
+    print("\tDBSCAN finds {} clusters with embedding provided.".format(len(unique_label)))
 
-    print(
-        "\tDBSCAN finds {} clusters with embedding provided.\n\t Stats: ARI={}, Silhouette={}.".format(
-            len(unique_label),
-            np.round(ari, 4),
-            np.round(sil, 4)))
+    if label is not None:
+        ari = adjusted_rand_score(cls.labels_, label)
+        try:
+            sil = silhouette_score(origin_data, cls.labels_)
+        except ValueError: # Dummy
+            sil = -2
+        print("\t Stats: ARI={}, Silhouette={}.".format(np.round(ari, 4), np.round(sil, 4)))
+    else: # Dummy
+        ari = -2
+        sil = -2
+
     print("\tElapsed time: {}s".format(t))
 
     if logger is not None:
@@ -209,7 +221,8 @@ def run_dbscan(data, label, output_embedding, t_sne_embedding, cls_path, visuali
             plt.scatter(output_embedding[cls.labels_ == lb, 0], output_embedding[cls.labels_ == lb, 1], s=3, label=lb)
         plt.legend(loc="upper right")
         plt.title("DBSCAN: k={} ARI={} Sil={}".format(len(unique_label), np.round(ari, 4), np.round(sil, 4)))
-        plt.savefig(os.path.join(visualization, "DBSCAN_{}_{}_{}_Direct.pdf".format(model.lower(), epoch, emb_type)), dpi=400)
+        plt.savefig(os.path.join(visualization, "DBSCAN_{}_{}_{}_Direct.pdf".format(model.lower(), epoch, emb_type)),
+                    dpi=400)
         plt.clf()
 
     # Save
@@ -220,13 +233,13 @@ def run_dbscan(data, label, output_embedding, t_sne_embedding, cls_path, visuali
     return cls.labels_
 
 
-def run_t_sne(data_dict, cache_path, cls_path=None, cache_name="tsne.pkl", epoch=None, model=None, sets=None):
+def run_t_sne(data, label, cache_path, cls_path=None, cache_name="tsne.pkl", epoch=None, model=None, sets=None):
     if not os.path.exists(cache_path):
         print(">>> Directory {} created.".format(cache_path))
         os.mkdir(cache_path)
 
     if not os.path.isfile(os.path.join(cache_path, cache_name)):
-        t_sne_embedding = t_sne_visualize(data_dict['data'], data_dict['label'], cls_path, epoch=epoch, model=model, sets=sets)
+        t_sne_embedding = t_sne_visualize(data, label, cls_path, epoch=epoch, model=model, sets=sets)
         with open(os.path.join(cache_path, cache_name), 'wb') as f:
             pkl.dump(t_sne_embedding, f)
     else:
@@ -240,7 +253,7 @@ def run_t_sne(data_dict, cache_path, cls_path=None, cache_name="tsne.pkl", epoch
 if __name__ == "__main__":
     arg = parse_args()
     data_dict, _ = load_data(arg.mm, arg.np, arg.cache, arg.path, arg.write_cache, arg.skip_row, arg.skip_col, arg.seps,
-                             arg.transpose, arg.label, arg.label_path, arg.col_name)
+                             arg.transpose, arg.label, arg.label_path, arg.cache_name, arg.col_name)
 
     t_sne_embedding = run_t_sne(data_dict, arg.cache_path, CLS_PATH)
     # k_means_cls_result = run_k_means(data_dict, t_sne_embedding, CLS_PATH)
