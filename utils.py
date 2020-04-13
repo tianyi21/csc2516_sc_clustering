@@ -20,11 +20,11 @@ import numpy as np
 from cfgs import NUMPY_SEED, TORCH_SEED
 
 
-def load_data(mm, np, cache, file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, col_name):
+def load_data(mm, np, cache, file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, cache_name, col_name):
     if mm:
-        data_dict, dim = load_mm(file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, col_name)
+        data_dict, dim = load_mm(file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, cache_name, col_name)
     elif np:
-        data_dict, dim = load_mat(file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, col_name)
+        data_dict, dim = load_mat(file_path, w_cache, skip_row, skip_col, seps, transpose, label, label_path, cache_name, col_name)
     elif cache:
         data_dict, dim = load_cache(file_path)
     else:
@@ -32,26 +32,27 @@ def load_data(mm, np, cache, file_path, w_cache, skip_row, skip_col, seps, trans
     return data_dict, dim
 
 
-def write_cache(data_dict):
-    print("Writing cache to {}".format("./cache/cache.pkl"))
+def write_cache(data_dict, cache_name):
+    cache_path = os.path.join("./cache", cache_name)
+    print("Writing cache to {}".format(cache_path))
     if not os.path.exists("./cache"):
         os.mkdir("./cache")
-    if os.path.isfile("./cache/cache.pkl"):
+    if os.path.isfile(cache_path):
         while True:
-            ans = input("File ./cache/cache.pkl exists. Confirm overwrite ? [Y/N] ")
+            ans = input("File {} exists. Confirm overwrite ? [Y/N] ".format(cache_path))
             if ans.lower() == 'y':
-                os.remove("./cache/cache.pkl")
+                os.remove(cache_path)
                 break
             elif ans.lower() == 'n':
                 raise FileExistsError("File with default cache name exists.")
             else:
                 print("Invalid input.")
 
-    with open("./cache/cache.pkl", 'wb') as f:
+    with open(cache_path, 'wb') as f:
         pkl.dump(data_dict, f)
 
 
-def load_mm(file_path, cache, skip_row, skip_col, seps, transpose, label, label_path, col_name="Group"):
+def load_mm(file_path, cache, skip_row, skip_col, seps, transpose, label, label_path, cache_name, col_name="Group"):
     if not os.path.isfile(file_path):
         raise FileNotFoundError("File {} not found.".format(file_path))
     print("Loading data from: {}".format(file_path))
@@ -68,11 +69,11 @@ def load_mm(file_path, cache, skip_row, skip_col, seps, transpose, label, label_
     else:
         data_dict = {'data': data}
     if cache:
-        write_cache(data_dict)
+        write_cache(data_dict, cache_name)
     return data_dict, data_dict['data'].shape[1]
 
 
-def load_mat(file_path, cache, skip_row, skip_col, seps, transpose, label, label_path, col_name="Group"):
+def load_mat(file_path, cache, skip_row, skip_col, seps, transpose, label, label_path, cache_name, col_name="Group"):
     if not os.path.isfile(file_path):
         raise FileNotFoundError("File {} not found.".format(file_path))
     print("Loading data from: {}".format(file_path))
@@ -87,7 +88,7 @@ def load_mat(file_path, cache, skip_row, skip_col, seps, transpose, label, label
     else:
         data_dict = {'data': data}
     if cache:
-        write_cache(data_dict)
+        write_cache(data_dict, cache_name)
     return data_dict, data_dict['data'].shape[1]
 
 
