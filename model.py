@@ -157,9 +157,9 @@ class _VAESC(nn.Module):
         cls.device = device
 
 
-def vl_loop(model, loader, sel, return_sel):
+def vl_loop(model, loader, sel, return_sel, imput=False):
     epoch_loss, epoch_loss_w, epoch_loss_kl = 0, 0, 0
-    embedding = []
+    embedding, ys = [], []
     with torch.no_grad():
         for _, data_batch in enumerate(loader):
             try:
@@ -170,6 +170,7 @@ def vl_loop(model, loader, sel, return_sel):
             if sel.lower() == 'ae':
                 y, x_enc, q = model(data)
                 embedding.extend(x_enc.detach().cpu().numpy())
+                ys.extend(y.detach().cpu().numpy())
                 loss_w = compute_loss('ae', data, y, x_enc)
 
                 loss_w *= LOSS_WEIGHT["mse"]
@@ -180,6 +181,7 @@ def vl_loop(model, loader, sel, return_sel):
             elif sel.lower() == 'vae':
                 y, mu, logvar = model(data)
                 embedding.extend(mu.detach().cpu().numpy())
+                ys.extend(y.detach().cpu().numpy())
                 loss_w, loss_kl = compute_loss('vae', data, y, mu=mu, logvar=logvar)
 
                 loss_w *= LOSS_WEIGHT["mse"]
@@ -201,9 +203,12 @@ def vl_loop(model, loader, sel, return_sel):
     elif return_sel == 'vis':
         try:
             (data, label) = loader.dataset[:]
-            return np.array(embedding), label.cpu().numpy()
+            if not imput:
+                return np.array(embedding), label.cpu().numpy()
+            else:
+                return np.array(embedding), label.cpu().numpy(), np.array(ys)
         except ValueError:
-            return np.array(embedding)
+            return np.array(embedding) if not imput else np.array(embedding), np.array(ys)
 
 
 def learning_rate_decay(optimizer, decay):
