@@ -36,3 +36,11 @@ VIS_PATH = os.path.join(RESULTS_PATH, "visualization")
 CLS_PATH = os.path.join(RESULTS_PATH, "clustering")
 
 LOG_PATH = os.path.join(RESULTS_PATH, "logs")
+
+# For Benchmarking
+DR_METHOD = ["TSNE", "PCA"]
+
+DR_DIM = [32, 16, 8, 2]
+
+BCM_PATH = os.path.join(RESULTS_PATH, "benchmark")
+
