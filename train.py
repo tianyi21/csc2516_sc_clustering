@@ -299,14 +299,10 @@ if __name__ == "__main__":
             if not arg.imput:
                 embedding, label = vl_loop(model, loader, arg.model, 'vis')
             else:
-                try:
-                    (data, _) = loader.dataset[:]
-                    embedding, label, ys = vl_loop(model, loader, arg.model, 'vis', arg.imput)
-                    mse_original_noisy = mean_squared_error(data_noiseless, data.cpu().numpy())
-                    mse_original_imput = mean_squared_error(data_noiseless, ys)
-                    print(">>> Imputation Results: Original MSE={}, Imputed MSE={}".format(mse_original_noisy, mse_original_imput))
-                except ValueError:
-                    raise NotImplementedError
+                embedding, label, ys = vl_loop(model, loader, arg.model, 'vis', arg.imput)
+                mse_original_noisy = mean_squared_error(data_noiseless, data_dict["data"])
+                mse_original_imput = mean_squared_error(data_noiseless, ys)
+                print(">>> Imputation Results: Original MSE={}, Imputed MSE={}".format(mse_original_noisy, mse_original_imput))
 
             # T-SNE plot current embedding
             cur_tsne = t_sne_visualize(embedding, label, VIS_PATH, epoch=epoch + 1, model=arg.model.lower())
