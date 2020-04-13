@@ -19,6 +19,8 @@ K_MEANS_DIM = np.arange(5, 12)
 LOSS_WEIGHT = {"mse": 1,
                "kl": 1}
 
+T_SNE_N_JOB = 4
+
 VAL_STEP = 50
 
 VIS_EPOCH = 50
