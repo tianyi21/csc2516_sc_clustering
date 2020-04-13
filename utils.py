@@ -112,6 +112,8 @@ def load_label(label_path, seps, col_name):
 
 def split_data(data_dict, label, device, batch_size, tr_ratio, vl_ratio, ts_ratio=.0, sub=1):
     torch.manual_seed(TORCH_SEED)
+    assert tr_ratio + vl_ratio + ts_ratio == 1
+
     sample_length = int(sub * len(data_dict['data']))
     print("Subsampled dataset with {}/{} ({}%) data points.".format(sample_length, len(data_dict['data']), np.round(
         100 * sample_length / len(data_dict['data']), 2)))
@@ -128,7 +130,8 @@ def split_data(data_dict, label, device, batch_size, tr_ratio, vl_ratio, ts_rati
 
     tr_set, vl_set, ts_set = random_split(dataset, [tr_size, vl_size, ts_size])
 
-    tr_loader, vl_loader = DataLoader(tr_set, batch_size, shuffle=False), DataLoader(vl_set, batch_size, shuffle=False)
+    tr_loader = DataLoader(tr_set, batch_size, shuffle=False)
+    vl_loader = DataLoader(vl_set, batch_size, shuffle=False) if vl_ratio != 0 else None
     ts_loader = DataLoader(ts_set, batch_size, shuffle=False) if ts_ratio != 0 else None
     print("Dataset split as: Train {} ({}%); Validate {} ({}%); Test {} ({}%)\n".format(
         tr_size, 100 * np.round(tr_size / len(dataset), 2),
