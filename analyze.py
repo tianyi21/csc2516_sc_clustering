@@ -185,7 +185,7 @@ def run_dbscan(output_embedding, label, origin_data, t_sne_embedding, cls_path, 
     return cls.labels_
 
 
-def run_t_sne(data, label, cache_path, cls_path=None, cache_name="tsne.pkl", epoch=None, model=None, sets=None, n_component=2, rtn_time=False):
+def run_t_sne(data, label, cache_path, cls_path=None, cache_name="tsne.pkl", epoch=None, model=None, sets=None, n_component=2):
     if not os.path.exists(cache_path):
         print(">>> Directory {} created.".format(cache_path))
         os.mkdir(cache_path)
