@@ -16,8 +16,10 @@ from eval import compute_loss
 from analyze import t_sne_visualize, run_t_sne, run_dbscan, run_k_means
 from model import _AESC, _VAESC, learning_rate_decay, vl_loop
 
+
 import argparse
 import torch
+from sklearn.metrics import mean_squared_error
 
 
 def parse_args():
@@ -177,8 +179,11 @@ def parse_args():
                         dest="gsig",
                         default=0.5,
                         type=float,
-                        help="Sigma of Gaussian noise"
-    )
+                        help="Sigma of Gaussian noise")
+    parser.add_argument('--imput',
+                        dest="imput",
+                        action="store_true",
+                        help="Set -> Imputation experiments")
     args = parser.parse_args()
     return args
 
@@ -205,8 +210,8 @@ if __name__ == "__main__":
     print("\n========Reading Data========")
     data_dict, dim = load_data(arg.mm, arg.np, arg.cache, arg.path, arg.write_cache, arg.skip_row, arg.skip_col,
                                arg.seps, arg.transpose, arg.label, arg.label_path, arg.cache_name, arg.col_name)
+    data_noiseless = data_dict["data"].copy()
     data_dict = add_noise(data_dict, arg.noise, arg.dprob, arg.gsig)
-
     tr_loader, vl_loader, ts_loader = split_data(data_dict, arg.label, device, arg.batch_size, arg.tr, arg.vl,
                                                  arg.ts, arg.sub)
 
@@ -291,7 +296,18 @@ if __name__ == "__main__":
         if (epoch + 1) % VIS_EPOCH == 0:
             model.eval()
             loader = vl_loader if vl_loader is not None else tr_loader
-            embedding, label = vl_loop(model, loader, arg.model, 'vis')
+            if not arg.imput:
+                embedding, label = vl_loop(model, loader, arg.model, 'vis')
+            else:
+                try:
+                    (data, _) = loader.dataset[:]
+                    embedding, label, ys = vl_loop(model, loader, arg.model, 'vis', arg.imput)
+                    mse_original_noisy = mean_squared_error(data_noiseless, data.cpu().numpy())
+                    mse_original_imput = mean_squared_error(data_noiseless, ys)
+                    print(">>> Imputation Results: Original MSE={}, Imputed MSE={}".format(mse_original_noisy, mse_original_imput))
+                except ValueError:
+                    raise NotImplementedError
+
             # T-SNE plot current embedding
             cur_tsne = t_sne_visualize(embedding, label, VIS_PATH, epoch=epoch + 1, model=arg.model.lower())
             try:
