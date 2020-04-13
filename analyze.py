@@ -245,7 +245,7 @@ if __name__ == "__main__":
     print("\n========Reading Data========")
     data, _= load_mat(arg.data_path, False, 1, 1, ',', True, False, None, None)
     label = load_label(arg.label_path, ',', '0')
-
+    data = data["data"]
     k_means_logger = Logger(LOG_PATH, "Benchmark_K_MEANS.log", benchmark_logger=True)
     dbscan_logger = Logger(LOG_PATH, "Benchmark_DBSCAN.log", benchmark_logger=True)
 
@@ -256,6 +256,9 @@ if __name__ == "__main__":
 
     for dim in DR_DIM:
         for method in ["PCA", "TSNE"]:
+            if method == "TSNE" and dim != 2:
+                continue
+            print("\n>>> Running Experiments: DR={} Dim={}".format(method, dim))
             embedding, t_dr = run_dr(data, method, "./cache", "{}_{}.pkl".format(method, dim), dim)
             for k in K_MEANS_DIM:
                 print(">>> Running KMeans with k={}".format(k))
