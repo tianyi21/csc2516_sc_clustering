@@ -172,12 +172,12 @@ def vl_loop(model, loader, sel, return_sel):
             try:
                 (data, label) = data_batch
             except ValueError:
-                (data) = data_batch[0]
+                (data) = data_batch[:]
 
             if sel.lower() == 'ae':
                 y, x_enc, q = model(data)
                 embedding.extend(x_enc.detach().cpu().numpy())
-                loss_w = compute_loss('ae', data, y, x_enc, p)
+                loss_w = compute_loss('ae', data, y, x_enc)
 
                 loss_w *= LOSS_WEIGHT["mse"]
                 loss_vl = loss_w
@@ -210,7 +210,7 @@ def vl_loop(model, loader, sel, return_sel):
             (data, label) = loader.dataset[:]
             return np.array(embedding), label.cpu().numpy()
         except ValueError:
-            return np.array(embedding), None
+            return np.array(embedding)
 
 
 def learning_rate_decay(optimizer, decay):
