@@ -47,6 +47,10 @@ def parse_args():
                         dest="label_path",
                         default="./gt.csv",
                         help="Specify the path of label")
+    parser.add_argument('--cache_name',
+                        dest="cache_name",
+                        default="cache.pkl",
+                        help="Name for cache to be written")
     parser.add_argument('-t',
                         dest="transpose",
                         action="store_true",
@@ -158,11 +162,11 @@ def parse_args():
                         help="Learning rate for pre-trained parameters")
     parser.add_argument('--model',
                         dest="model",
-                        default="ae",
+                        default="vae",
                         help="Model: AE / VAE")
     parser.add_argument('--noise',
                         dest="noise",
-                        default="dropout",
+                        default="none",
                         help="Simulate noise. dropout/gaussian/d+g/none")
     parser.add_argument('--dprob',
                         dest="dprob",
@@ -200,16 +204,15 @@ if __name__ == "__main__":
     # Read data, label
     print("\n========Reading Data========")
     data_dict, dim = load_data(arg.mm, arg.np, arg.cache, arg.path, arg.write_cache, arg.skip_row, arg.skip_col,
-                               arg.seps, arg.transpose, arg.label, arg.label_path, arg.col_name)
+                               arg.seps, arg.transpose, arg.label, arg.label_path, arg.cache_name, arg.col_name)
     data_dict = add_noise(data_dict, arg.noise, arg.dprob, arg.gsig)
 
     tr_loader, vl_loader, ts_loader = split_data(data_dict, arg.label, device, arg.batch_size, arg.tr, arg.vl,
                                                  arg.ts, arg.sub)
-    (data, label) = vl_loader.dataset[:]
 
     # Def logger
-    logger_decan_tsne = Logger(LOG_PATH, "{}_DECAN_TSNE.log".format(arg.model.lower()))
-    logger_decan_vae = Logger(LOG_PATH, "{}_DECAN_VAERAW.log".format(arg.model.lower()))
+    logger_dbscan_tsne = Logger(LOG_PATH, "{}_DBSCAN_TSNE.log".format(arg.model.lower()))
+    logger_dbscan_vae = Logger(LOG_PATH, "{}_DBSCAN_VAERAW.log".format(arg.model.lower()))
     logger_kmeans_tsne = Logger(LOG_PATH, "{}_KMeans_TSNE.log".format(arg.model.lower()))
     logger_kmeans_vae = Logger(LOG_PATH, "{}_KMeans_VAERAW.log".format(arg.model.lower()))
     logger_loss = Logger(LOG_PATH, "{}_loss.log".format(arg.model.lower()), loss_logger=True)
@@ -244,7 +247,7 @@ if __name__ == "__main__":
             try:
                 (data_tr, label_tr) = data_batch_tr
             except ValueError:
-                (data_tr) = data_batch_tr[0]
+                (data_tr) = data_batch_tr[:]
 
             if arg.model.lower() == 'ae':
                 y, x_enc = model(data_tr)
@@ -292,20 +295,20 @@ if __name__ == "__main__":
             try:
                 (data, label) = vl_loader.dataset[:]
                 # T-SNE plot of vl_data
-                t_sne_embedding = run_t_sne({"data": data.cpu().numpy(), "label": label.cpu().numpy()}, "./cache",
+                t_sne_embedding = run_t_sne(data.cpu().numpy(), label.cpu().numpy(), "./cache",
                                             cls_path=VIS_PATH,
                                             sets="Validation", cache_name="tsne_vl.pkl")
                 # Clustering on 2nd stage t-sne results
-                run_dbscan(data.cpu().numpy(), label.cpu().numpy(), cur_tsne, t_sne_embedding, CLS_PATH,
-                          VIS_PATH, arg.model, epoch + 1, emb_type="TSNE", logger=logger_decan_tsne)
+                run_dbscan(cur_tsne, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding, CLS_PATH,
+                          VIS_PATH, arg.model, epoch + 1, emb_type="TSNE", logger=logger_dbscan_tsne)
                 # Clustering on raw embedding
-                run_dbscan(data.cpu().numpy(), label.cpu().numpy(), embedding, t_sne_embedding, CLS_PATH,
-                          VIS_PATH, arg.model, epoch + 1, emb_type="VAERAW", logger=logger_decan_vae)
+                run_dbscan(embedding, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding, CLS_PATH,
+                          VIS_PATH, arg.model, epoch + 1, emb_type="VAERAW", logger=logger_dbscan_vae)
                 # Clustering on 2nd stage t-sne results
-                run_k_means({"data": cur_tsne, "label": label.cpu().numpy()}, data.cpu().numpy(), t_sne_embedding,
+                run_k_means(cur_tsne, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding,
                             VIS_PATH, CLS_PATH, arg.model.lower(), epoch + 1, emb_type="TSNE", logger=logger_kmeans_tsne)
                 # Clustering on raw embedding
-                run_k_means({"data": embedding, "label": label.cpu().numpy()}, data.cpu().numpy(), t_sne_embedding,
+                run_k_means(embedding, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding,
                             VIS_PATH, CLS_PATH, arg.model.lower(), epoch + 1, emb_type="VAERAW", logger=logger_kmeans_vae)
             except ValueError:
                 raise NotImplementedError
@@ -320,5 +323,5 @@ if __name__ == "__main__":
             torch.save(save_dict, save_name)
             print("Saving model to {}\n".format(os.path.join(arg.trained_path, save_name)))
 
-    logger_decan_tsne.close()
-    logger_decan_vae.close()
+    logger_dbscan_tsne.close()
+    logger_dbscan_vae.close()
