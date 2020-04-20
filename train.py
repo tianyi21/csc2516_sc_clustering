@@ -316,14 +316,14 @@ if __name__ == "__main__":
                 run_dbscan(cur_tsne, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding, CLS_PATH,
                           VIS_PATH, arg.model, epoch + 1, emb_type="TSNE", logger=logger_dbscan_tsne)
                 # Clustering on raw embedding
-                run_dbscan(embedding, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding, CLS_PATH,
-                          VIS_PATH, arg.model, epoch + 1, emb_type="VAERAW", logger=logger_dbscan_vae)
+                # run_dbscan(embedding, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding, CLS_PATH,
+                #           VIS_PATH, arg.model, epoch + 1, emb_type="VAERAW", logger=logger_dbscan_vae)
                 # Clustering on 2nd stage t-sne results
-                run_k_means(cur_tsne, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding,
-                            VIS_PATH, CLS_PATH, arg.model.lower(), epoch + 1, emb_type="TSNE", logger=logger_kmeans_tsne)
+                # run_k_means(cur_tsne, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding,
+                #            VIS_PATH, CLS_PATH, arg.model.lower(), epoch + 1, emb_type="TSNE", logger=logger_kmeans_tsne)
                 # Clustering on raw embedding
-                run_k_means(embedding, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding,
-                            VIS_PATH, CLS_PATH, arg.model.lower(), epoch + 1, emb_type="VAERAW", logger=logger_kmeans_vae)
+                # run_k_means(embedding, label.cpu().numpy(), data.cpu().numpy(), t_sne_embedding,
+                #            VIS_PATH, CLS_PATH, arg.model.lower(), epoch + 1, emb_type="VAERAW", logger=logger_kmeans_vae)
             except ValueError:
                 raise NotImplementedError
 
