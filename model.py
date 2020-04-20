@@ -30,6 +30,8 @@ class _AESC(nn.Module):
 
     def __init__(self):
         super(_AESC, self).__init__()
+        print("Auto-encoder model is deprecated. Use VAE model instead")
+        raise NotImplementedError
         self.enc_1_fc = nn.Sequential(nn.Linear(self.dim[0], self.dim[1]), nn.ReLU())
         self.enc_2_fc = nn.Sequential(nn.Linear(self.dim[1], self.dim[2]), nn.BatchNorm1d(self.dim[2]), nn.Dropout(0.5), nn.ReLU())
         self.enc_3_fc = nn.Sequential(nn.Linear(self.dim[2], self.dim[3]), nn.Dropout(0.5), nn.ReLU())
