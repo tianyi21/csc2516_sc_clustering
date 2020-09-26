@@ -210,6 +210,12 @@ if __name__ == "__main__":
     print("\n========Reading Data========")
     data_dict, dim = load_data(arg.mm, arg.np, arg.cache, arg.path, arg.write_cache, arg.skip_row, arg.skip_col,
                                arg.seps, arg.transpose, arg.label, arg.label_path, arg.cache_name, arg.col_name)
+    
+    # add normalization temporarily
+    import numpy as np
+    data_dict["data"] = np.log2(data_dict["data"] + 1)
+    data_dict["data"] = data_dict["data"] / np.max(data_dict["data"])
+    
     data_noiseless = data_dict["data"].copy()
     data_dict = add_noise(data_dict, arg.noise, arg.dprob, arg.gsig)
     tr_loader, vl_loader, ts_loader = split_data(data_dict, arg.label, device, arg.batch_size, arg.tr, arg.vl,
